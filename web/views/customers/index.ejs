@@ -1,0 +1,149 @@
+<%- include('../partials/header') %>
+
+<div class="page-header">
+  <div>
+    <h1 class="page-title"><%= title %></h1>
+    <p style="color: var(--text-muted); font-size: 13px; margin-top: 4px;">Tổng cộng: <strong><%= totalItems %></strong> khách hàng</p>
+  </div>
+  <div class="page-actions">
+    <% if (currentUser.role === 'manager') { %>
+      <a href="/customers/export/csv" class="btn btn-secondary">📥 Xuất CSV</a>
+    <% } %>
+    <% if (['sales', 'manager'].includes(currentUser.role)) { %>
+      <a href="/customers/new" class="btn btn-primary">➕ Thêm Khách Hàng</a>
+    <% } %>
+  </div>
+</div>
+
+<!-- Bộ lọc và tìm kiếm -->
+<div class="card" style="padding: 16px; margin-bottom: 20px;">
+  <form action="/customers" method="GET" style="display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end;">
+    <div style="flex: 2; min-width: 220px;">
+      <label class="form-label" style="font-size: 11px;">Tìm kiếm (Tên, Công ty, Email, SĐT, Mã)</label>
+      <input type="text" name="search" class="form-control" value="<%= query.search || '' %>" placeholder="Nhập từ khóa...">
+    </div>
+
+    <div style="flex: 1; min-width: 140px;">
+      <label class="form-label" style="font-size: 11px;">Phân khúc</label>
+      <select name="segment" class="form-control">
+        <option value="">-- Tất cả --</option>
+        <option value="vip" <%= query.segment === 'vip' ? 'selected' : '' %>>VIP</option>
+        <option value="regular" <%= query.segment === 'regular' ? 'selected' : '' %>>Thường xuyên</option>
+        <option value="new" <%= query.segment === 'new' ? 'selected' : '' %>>Mới (New)</option>
+        <option value="inactive" <%= query.segment === 'inactive' ? 'selected' : '' %>>Ngưng hoạt động</option>
+      </select>
+    </div>
+
+    <div style="flex: 1; min-width: 140px;">
+      <label class="form-label" style="font-size: 11px;">Nguồn khách</label>
+      <select name="source" class="form-control">
+        <option value="">-- Tất cả --</option>
+        <option value="website" <%= query.source === 'website' ? 'selected' : '' %>>Website</option>
+        <option value="referral" <%= query.source === 'referral' ? 'selected' : '' %>>Giới thiệu</option>
+        <option value="facebook" <%= query.source === 'facebook' ? 'selected' : '' %>>Facebook</option>
+        <option value="event" <%= query.source === 'event' ? 'selected' : '' %>>Sự kiện</option>
+        <option value="cold_call" <%= query.source === 'cold_call' ? 'selected' : '' %>>Gọi trực tiếp</option>
+        <option value="other" <%= query.source === 'other' ? 'selected' : '' %>>Khác</option>
+      </select>
+    </div>
+
+    <div style="flex: 1; min-width: 150px;">
+      <label class="form-label" style="font-size: 11px;">Người phụ trách</label>
+      <select name="owner_id" class="form-control">
+        <option value="">-- Tất cả --</option>
+        <% users.forEach(u => { %>
+          <option value="<%= u.id %>" <%= query.owner_id == u.id ? 'selected' : '' %>><%= u.full_name %></option>
+        <% }) %>
+      </select>
+    </div>
+
+    <div style="flex: 1; min-width: 140px;">
+      <label class="form-label" style="font-size: 11px;">Lưu trữ</label>
+      <select name="is_archived" class="form-control">
+        <option value="false" <%= query.is_archived === 'false' || !query.is_archived ? 'selected' : '' %>>Đang hoạt động</option>
+        <option value="true" <%= query.is_archived === 'true' ? 'selected' : '' %>>Đã lưu trữ</option>
+        <option value="all" <%= query.is_archived === 'all' ? 'selected' : '' %>>Tất cả</option>
+      </select>
+    </div>
+
+    <div>
+      <button type="submit" class="btn btn-secondary">🔍 Lọc</button>
+      <a href="/customers" class="btn btn-secondary" title="Đặt lại bộ lọc">Xóa</a>
+    </div>
+  </form>
+</div>
+
+<!-- Bảng danh sách -->
+<div class="card" style="padding: 0;">
+  <div class="table-responsive">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Mã KH</th>
+          <th>Khách hàng / Công ty</th>
+          <th>Liên hệ</th>
+          <th>Phân khúc</th>
+          <th>Nguồn</th>
+          <th>Người phụ trách</th>
+          <th>Thao tác</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (customers.length === 0) { %>
+          <tr>
+            <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 32px;">
+              Không tìm thấy khách hàng nào phù hợp với điều kiện tìm kiếm.
+            </td>
+          </tr>
+        <% } %>
+        <% customers.forEach(c => { %>
+          <tr>
+            <td>
+              <a href="/customers/<%= c.id %>" style="font-weight: 700; color: var(--primary); text-decoration: none;">
+                <%= c.customer_code %>
+              </a>
+            </td>
+            <td>
+              <div style="font-weight: 600;"><%= c.full_name %></div>
+              <div style="font-size: 12px; color: var(--text-muted);"><%= c.company || 'Cá nhân' %></div>
+            </td>
+            <td>
+              <div><%= c.phone || '-' %></div>
+              <div style="font-size: 12px; color: var(--text-muted);"><%= c.email || '-' %></div>
+            </td>
+            <td>
+              <span class="badge badge-<%= c.segment %>"><%= c.segment %></span>
+              <% if (c.is_archived) { %>
+                <span class="badge" style="background: #e2e8f0; color: #475569;">Đã lưu trữ</span>
+              <% } %>
+            </td>
+            <td><%= c.source %></td>
+            <td><%= c.owner_name || 'Chưa phân công' %></td>
+            <td>
+              <div style="display: flex; gap: 6px;">
+                <a href="/customers/<%= c.id %>" class="btn btn-secondary btn-sm">Chi tiết</a>
+                <% if (['sales', 'manager'].includes(currentUser.role)) { %>
+                  <a href="/customers/<%= c.id %>/edit" class="btn btn-secondary btn-sm">Sửa</a>
+                <% } %>
+              </div>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Phân trang -->
+<% if (totalPages > 1) { %>
+  <div style="display: flex; justify-content: center; gap: 6px; margin-top: 16px;">
+    <% for (let i = 1; i <= totalPages; i++) { %>
+      <a href="/customers?page=<%= i %>&search=<%= query.search || '' %>&segment=<%= query.segment || '' %>&source=<%= query.source || '' %>&owner_id=<%= query.owner_id || '' %>&is_archived=<%= query.is_archived || '' %>" 
+         class="btn <%= currentPage === i ? 'btn-primary' : 'btn-secondary' %> btn-sm">
+        <%= i %>
+      </a>
+    <% } %>
+  </div>
+<% } %>
+
+<%- include('../partials/footer') %>

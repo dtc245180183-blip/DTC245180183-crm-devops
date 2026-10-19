@@ -1,0 +1,150 @@
+<%- include('../partials/header') %>
+
+<div class="page-header">
+  <div>
+    <h1 class="page-title"><%= title %></h1>
+    <p style="color: var(--text-muted); font-size: 13px; margin-top: 4px;">Quản trị tài khoản, phân quyền RBAC và bảo mật người dùng</p>
+  </div>
+  <div class="page-actions">
+    <button class="btn btn-primary" onclick="document.getElementById('modal-new-user').style.display = 'block';">➕ Thêm Nhân Viên Mới</button>
+  </div>
+</div>
+
+<!-- Modal Thêm Nhân Viên Mới -->
+<div id="modal-new-user" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 100;">
+  <div class="card" style="max-width: 500px; margin: 60px auto;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+      <h3 style="font-size: 16px;">Thêm Tài Khoản Nhân Viên Mới</h3>
+      <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('modal-new-user').style.display = 'none';">✕</button>
+    </div>
+    <form action="/users" method="POST">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+      <div class="form-group">
+        <label class="form-label">Tên đăng nhập (Username) *</label>
+        <input type="text" name="username" class="form-control" required placeholder="ví dụ: sales03">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Họ và tên *</label>
+        <input type="text" name="full_name" class="form-control" required placeholder="ví dụ: Nguyễn Văn C">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Địa chỉ Email *</label>
+        <input type="email" name="email" class="form-control" required placeholder="ví dụ: sales03@example.com">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Vai trò hệ thống (RBAC) *</label>
+        <select name="role" class="form-control" required>
+          <option value="sales">Kinh doanh (Sales)</option>
+          <option value="support">Chăm sóc khách hàng (Support)</option>
+          <option value="manager">Quản lý (Manager)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Mật khẩu khởi tạo *</label>
+        <input type="password" name="password" class="form-control" required placeholder="Tối thiểu 6 ký tự">
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+        <button type="button" class="btn btn-secondary" onclick="document.getElementById('modal-new-user').style.display = 'none';">Hủy</button>
+        <button type="submit" class="btn btn-primary">Tạo Tài Khoản</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal Đặt Lại Mật Khẩu -->
+<div id="modal-reset-pwd" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 100;">
+  <div class="card" style="max-width: 450px; margin: 100px auto;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+      <h3 style="font-size: 16px;">Đặt Lại Mật Khẩu Nhân Viên</h3>
+      <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('modal-reset-pwd').style.display = 'none';">✕</button>
+    </div>
+    <form id="form-reset-pwd" method="POST">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+      <div class="form-group">
+        <label class="form-label">Mật khẩu mới *</label>
+        <input type="password" name="new_password" class="form-control" required minlength="6" placeholder="Nhập mật khẩu mới...">
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px;">
+        <button type="button" class="btn btn-secondary" onclick="document.getElementById('modal-reset-pwd').style.display = 'none';">Hủy</button>
+        <button type="submit" class="btn btn-primary">Cập Nhật Mật Khẩu</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Bảng Danh Sách Nhân Viên -->
+<div class="card" style="padding: 0;">
+  <div class="table-responsive">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Tên đăng nhập</th>
+          <th>Họ và tên</th>
+          <th>Email</th>
+          <th>Vai trò</th>
+          <th>Trạng thái</th>
+          <th>Ngày tạo</th>
+          <th>Thao tác</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% users.forEach(u => { %>
+          <tr style="<%= !u.is_active ? 'background-color: #fff1f2;' : '' %>">
+            <td>#<%= u.id %></td>
+            <td><strong><%= u.username %></strong></td>
+            <td><%= u.full_name %></td>
+            <td><%= u.email %></td>
+            <td><span class="badge badge-regular"><%= u.role %></span></td>
+            <td>
+              <% if (u.is_active) { %>
+                <span class="badge badge-new">Đang Hoạt Động</span>
+              <% } else { %>
+                <span class="badge badge-urgent">Đã Bị Khóa</span>
+              <% } %>
+            </td>
+            <td><%= new Date(u.created_at).toLocaleDateString('vi-VN') %></td>
+            <td>
+              <div style="display: flex; gap: 6px;">
+                <!-- Đặt lại mật khẩu -->
+                <button type="button" class="btn btn-secondary btn-sm"
+                        onclick="
+                          document.getElementById('form-reset-pwd').action = '/users/<%= u.id %>/reset-password';
+                          document.getElementById('modal-reset-pwd').style.display = 'block';
+                        ">
+                  🔑 Đổi Mật Khẩu
+                </button>
+
+                <!-- Khóa / Mở khóa (KHÔNG cho khóa chính mình) -->
+                <% if (u.id === currentUser.id) { %>
+                  <button type="button" class="btn btn-secondary btn-sm" disabled title="Bạn không thể tự khóa tài khoản của chính mình">
+                    🛡️ Chính Bạn
+                  </button>
+                <% } else { %>
+                  <form action="/users/<%= u.id %>/toggle-lock" method="POST" style="margin: 0;" onsubmit="return confirm('Bạn có chắc muốn <%= u.is_active ? 'KHÓA' : 'MỞ KHÓA' %> tài khoản này?');">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <% if (u.is_active) { %>
+                      <button type="submit" class="btn btn-danger btn-sm">🔒 Khóa</button>
+                    <% } else { %>
+                      <button type="submit" class="btn btn-success btn-sm">🔓 Mở Khóa</button>
+                    <% } %>
+                  </form>
+                <% } %>
+              </div>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

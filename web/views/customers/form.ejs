@@ -1,0 +1,99 @@
+<%- include('../partials/header') %>
+
+<div class="page-header">
+  <div>
+    <h1 class="page-title"><%= title %></h1>
+    <p style="color: var(--text-muted); font-size: 13px; margin-top: 4px;">Điền thông tin hồ sơ khách hàng doanh nghiệp hoặc cá nhân</p>
+  </div>
+  <div class="page-actions">
+    <a href="/customers" class="btn btn-secondary">Quay lại danh sách</a>
+  </div>
+</div>
+
+<div class="card" style="max-width: 800px;">
+  <% if (error) { %>
+    <div class="alert alert-danger"><%= error %></div>
+  <% } %>
+  <% if (warning) { %>
+    <div class="alert" style="background: var(--warning-light); color: var(--warning); border: 1px solid #fde68a;"><%= warning %></div>
+  <% } %>
+
+  <form action="<%= isEdit ? '/customers/' + customer.id + '/edit' : '/customers' %>" method="POST">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label" for="full_name">Họ và tên khách hàng *</label>
+        <input type="text" id="full_name" name="full_name" class="form-control" value="<%= customer.full_name || '' %>" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="company">Tên công ty / Tổ chức</label>
+        <input type="text" id="company" name="company" class="form-control" value="<%= customer.company || '' %>">
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label" for="email">Email</label>
+        <input type="email" id="email" name="email" class="form-control" value="<%= customer.email || '' %>" placeholder="ví dụ: user@example.com">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="phone">Số điện thoại</label>
+        <input type="text" id="phone" name="phone" class="form-control" value="<%= customer.phone || '' %>" placeholder="ví dụ: 0901234567">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="address">Địa chỉ liên hệ</label>
+      <input type="text" id="address" name="address" class="form-control" value="<%= customer.address || '' %>">
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label" for="source">Nguồn khách hàng *</label>
+        <select id="source" name="source" class="form-control" required>
+          <option value="website" <%= customer.source === 'website' ? 'selected' : '' %>>Website</option>
+          <option value="referral" <%= customer.source === 'referral' ? 'selected' : '' %>>Giới thiệu</option>
+          <option value="facebook" <%= customer.source === 'facebook' ? 'selected' : '' %>>Facebook</option>
+          <option value="event" <%= customer.source === 'event' ? 'selected' : '' %>>Sự kiện / Hội chợ</option>
+          <option value="cold_call" <%= customer.source === 'cold_call' ? 'selected' : '' %>>Gọi tiếp cận trực tiếp</option>
+          <option value="other" <%= customer.source === 'other' ? 'selected' : '' %>>Khác</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="segment">Phân khúc khách hàng *</label>
+        <select id="segment" name="segment" class="form-control" required>
+          <option value="new" <%= customer.segment === 'new' ? 'selected' : '' %>>Mới (New)</option>
+          <option value="regular" <%= customer.segment === 'regular' ? 'selected' : '' %>>Thường xuyên (Regular)</option>
+          <option value="vip" <%= customer.segment === 'vip' ? 'selected' : '' %>>VIP</option>
+          <option value="inactive" <%= customer.segment === 'inactive' ? 'selected' : '' %>>Ngưng hoạt động (Inactive)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="owner_id">Người phụ trách (Sales)</label>
+        <select id="owner_id" name="owner_id" class="form-control">
+          <option value="">-- Chưa phân công --</option>
+          <% users.forEach(u => { %>
+            <option value="<%= u.id %>" <%= customer.owner_id == u.id ? 'selected' : '' %>><%= u.full_name %> (<%= u.role %>)</option>
+          <% }) %>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="notes">Ghi chú đặc biệt về khách hàng</label>
+      <textarea id="notes" name="notes" rows="3" class="form-control"><%= customer.notes || '' %></textarea>
+    </div>
+
+    <div style="display: flex; gap: 12px; margin-top: 24px;">
+      <button type="submit" class="btn btn-primary"><%= isEdit ? 'Cập Nhật Hồ Sơ' : 'Lưu Khách Hàng' %></button>
+      <a href="/customers" class="btn btn-secondary">Hủy bỏ</a>
+    </div>
+  </form>
+</div>
+
+<%- include('../partials/footer') %>

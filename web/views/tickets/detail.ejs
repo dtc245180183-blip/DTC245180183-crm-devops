@@ -1,0 +1,153 @@
+<%- include('../partials/header') %>
+
+<div class="page-header">
+  <div>
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <h1 class="page-title"><%= ticket.ticket_code %></h1>
+      <span class="badge badge-<%= ticket.priority %>"><%= ticket.priority %></span>
+      <span class="badge badge-regular"><%= ticket.status %></span>
+      <% if (ticket.is_sla_overdue) { %>
+        <span class="badge badge-sla-overdue">⚠️ Quá Hạn SLA (<%= slaHours[ticket.priority] %>h)</span>
+      <% } %>
+    </div>
+    <p style="color: var(--text-muted); font-size: 13px; margin-top: 4px;">
+      Khách hàng: <a href="/customers/<%= ticket.customer_id %>" style="color: var(--primary); font-weight: 600;"><%= ticket.customer_name %></a>
+      | Tạo ngày: <%= new Date(ticket.created_at).toLocaleString('vi-VN') %> bởi <strong><%= ticket.creator_name %></strong>
+      | Người phụ trách: <strong><%= ticket.assignee_name || 'Chưa nhận xử lý' %></strong>
+    </p>
+  </div>
+  <div class="page-actions">
+    <a href="/tickets" class="btn btn-secondary">Quay lại danh sách</a>
+  </div>
+</div>
+
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px;">
+  <!-- Cột Trái: Chi tiết & Bình luận trao đổi -->
+  <div>
+    <!-- Nội dung ticket -->
+    <div class="card" style="margin-bottom: 24px;">
+      <h3 style="font-size: 16px; margin-bottom: 12px;"><%= ticket.subject %></h3>
+      <div style="background: #f8fafc; padding: 16px; border-radius: var(--radius); border: 1px solid var(--border-color); font-size: 14px; line-height: 1.6; white-space: pre-wrap;"><%= ticket.description %></div>
+    </div>
+
+    <!-- Danh sách bình luận -->
+    <div class="card">
+      <h3 style="font-size: 16px; margin-bottom: 16px;">Trao đổi & Bình luận xử lý (<%= comments.length %>)</h3>
+
+      <% if (comments.length === 0) { %>
+        <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px;">Chưa có bình luận hoặc tệp đính kèm nào.</p>
+      <% } else { %>
+        <div style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 24px;">
+          <% comments.forEach(cm => { %>
+            <div style="padding: 14px; border: 1px solid var(--border-color); border-radius: var(--radius); background: #fff;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span style="font-size: 13px; font-weight: 600; color: #0f172a;">
+                  <%= cm.user_name %> <span class="badge badge-regular" style="font-size: 10px;"><%= cm.user_role %></span>
+                </span>
+                <span style="font-size: 11px; color: var(--text-muted);"><%= new Date(cm.created_at).toLocaleString('vi-VN') %></span>
+              </div>
+              <p style="font-size: 14px; line-height: 1.5; color: var(--text-main); white-space: pre-wrap;"><%= cm.content %></p>
+
+              <% if (cm.attachment_path) { %>
+                <div style="margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--border-color);">
+                  <span style="font-size: 12px; color: var(--text-muted);">📎 Tệp đính kèm:</span>
+                  <a href="/tickets/attachments/<%= cm.attachment_path %>" target="_blank" style="font-size: 13px; font-weight: 600; color: var(--primary); margin-left: 6px;">
+                    <%= cm.attachment_name || cm.attachment_path %>
+                  </a>
+                </div>
+              <% } %>
+            </div>
+          <% }) %>
+        </div>
+      <% } %>
+
+      <!-- Form Thêm Bình Luận & Upload Tệp -->
+      <form action="/tickets/<%= ticket.id %>/comments" method="POST" enctype="multipart/form-data" style="border-top: 1px solid var(--border-color); padding-top: 16px;">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+        <div class="form-group">
+          <label class="form-label" style="font-size: 13px;">Thêm phản hồi / cập nhật tiến độ *</label>
+          <textarea name="content" rows="3" class="form-control" required placeholder="Nhập nội dung trao đổi..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" style="font-size: 12px;">Đính kèm tệp tài liệu (PNG, JPG, WEBP, PDF - Tối đa 2MB)</label>
+          <input type="file" name="attachment" class="form-control" accept=".png,.jpg,.jpeg,.webp,.pdf">
+        </div>
+
+        <button type="submit" class="btn btn-primary">Gửi Phản Hồi</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Cột Phải: Thao tác & Luồng trạng thái -->
+  <div>
+    <!-- Phân công xử lý -->
+    <% if (canManage) { %>
+      <div class="card" style="margin-bottom: 24px;">
+        <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 12px;">Tiếp nhận & Phân công</h4>
+        <form action="/tickets/<%= ticket.id %>/assign" method="POST">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+          <% if (currentUser.role === 'manager') { %>
+            <div class="form-group">
+              <select name="assigned_to" class="form-control" style="font-size: 13px;">
+                <option value="">-- Chọn nhân viên --</option>
+                <% users.forEach(u => { %>
+                  <option value="<%= u.id %>" <%= ticket.assigned_to == u.id ? 'selected' : '' %>><%= u.full_name %> (<%= u.role %>)</option>
+                <% }) %>
+              </select>
+            </div>
+            <button type="submit" class="btn btn-secondary btn-sm" style="width: 100%;">Phân Công Nhân Viên</button>
+          <% } else { %>
+            <% if (!ticket.assigned_to || ticket.assigned_to !== currentUser.id) { %>
+              <button type="submit" class="btn btn-primary btn-sm" style="width: 100%;">Nhận Xử Lý Ticket Này</button>
+            <% } else { %>
+              <p style="font-size: 12px; color: var(--success); font-weight: 600;">Bạn đang phụ trách ticket này.</p>
+            <% } %>
+          <% } %>
+        </form>
+      </div>
+
+      <!-- Chuyển trạng thái quy trình SLA -->
+      <div class="card">
+        <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 12px;">Quy trình Xử lý SLA</h4>
+        <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 16px;">
+          Luồng: Open → In Progress → Resolved → Closed
+        </p>
+
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <% if (ticket.status === 'open') { %>
+            <form action="/tickets/<%= ticket.id %>/status" method="POST" style="margin:0;">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+              <input type="hidden" name="target_status" value="in_progress">
+              <button type="submit" class="btn btn-primary" style="width: 100%;">▶ Bắt Đầu Xử Lý (In Progress)</button>
+            </form>
+          <% } else if (ticket.status === 'in_progress') { %>
+            <form action="/tickets/<%= ticket.id %>/status" method="POST" style="margin:0;">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+              <input type="hidden" name="target_status" value="resolved">
+              <button type="submit" class="btn btn-success" style="width: 100%;">✓ Đã Giải Quyết (Resolved)</button>
+            </form>
+          <% } else if (ticket.status === 'resolved') { %>
+            <form action="/tickets/<%= ticket.id %>/status" method="POST" style="margin:0;">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+              <input type="hidden" name="target_status" value="closed">
+              <button type="submit" class="btn btn-secondary" style="width: 100%;">🔒 Đóng Ticket (Closed)</button>
+            </form>
+
+            <form action="/tickets/<%= ticket.id %>/status" method="POST" style="margin:0;">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+              <input type="hidden" name="target_status" value="in_progress">
+              <button type="submit" class="btn btn-secondary btn-sm" style="width: 100%; color: var(--warning);">↺ Mở Lại (Re-open)</button>
+            </form>
+          <% } else if (ticket.status === 'closed') { %>
+            <div class="alert alert-success" style="font-size: 12px; margin: 0;">Ticket đã đóng hoàn tất. Không thể thay đổi trạng thái.</div>
+          <% } %>
+        </div>
+      </div>
+    <% } %>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

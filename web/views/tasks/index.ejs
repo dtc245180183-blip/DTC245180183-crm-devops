@@ -1,0 +1,177 @@
+<%- include('../partials/header') %>
+
+<div class="page-header">
+  <div>
+    <h1 class="page-title"><%= title %></h1>
+    <p style="color: var(--text-muted); font-size: 13px; margin-top: 4px;">
+      <%= isManager ? 'Toàn bộ lịch nhắc việc nhân sự trong hệ thống' : 'Lịch nhắc việc cá nhân của bạn' %>
+    </p>
+  </div>
+  <div class="page-actions">
+    <button class="btn btn-primary" onclick="document.getElementById('modal-new-task').style.display = 'block';">➕ Thêm Nhắc Việc</button>
+  </div>
+</div>
+
+<!-- Modal Thêm Nhắc Việc -->
+<div id="modal-new-task" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 100;">
+  <div class="card" style="max-width: 500px; margin: 80px auto;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+      <h3 style="font-size: 16px;">Tạo Nhắc Việc Mới</h3>
+      <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('modal-new-task').style.display = 'none';">✕</button>
+    </div>
+    <form action="/tasks" method="POST">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+      <div class="form-group">
+        <label class="form-label">Tiêu đề công việc *</label>
+        <input type="text" name="title" class="form-control" required placeholder="Ví dụ: Gọi điện cho khách hàng A">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Thời hạn hoàn thành (Due Date) *</label>
+        <input type="datetime-local" name="due_at" class="form-control" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Khách hàng liên quan (tùy chọn)</label>
+        <select name="customer_id" class="form-control">
+          <option value="">-- Không gắn khách hàng --</option>
+          <% customers.forEach(c => { %>
+            <option value="<%= c.id %>"><%= c.customer_code %> - <%= c.full_name %></option>
+          <% }) %>
+        </select>
+      </div>
+
+      <% if (isManager) { %>
+        <div class="form-group">
+          <label class="form-label">Giao việc cho nhân viên</label>
+          <select name="assigned_to" class="form-control">
+            <% users.forEach(u => { %>
+              <option value="<%= u.id %>" <%= currentUser.id == u.id ? 'selected' : '' %>><%= u.full_name %> (<%= u.role %>)</option>
+            <% }) %>
+          </select>
+        </div>
+      <% } %>
+
+      <div class="form-group">
+        <label class="form-label">Ghi chú chi tiết</label>
+        <textarea name="description" rows="3" class="form-control" placeholder="Nội dung cần lưu ý..."></textarea>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+        <button type="button" class="btn btn-secondary" onclick="document.getElementById('modal-new-task').style.display = 'none';">Hủy</button>
+        <button type="submit" class="btn btn-primary">Lưu Nhắc Việc</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Lọc Nhắc Việc -->
+<div class="card" style="padding: 16px; margin-bottom: 20px;">
+  <form action="/tasks" method="GET" style="display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end;">
+    <div style="flex: 1; min-width: 140px;">
+      <label class="form-label" style="font-size: 11px;">Thời hạn</label>
+      <select name="timeframe" class="form-control">
+        <option value="all" <%= query.timeframe === 'all' || !query.timeframe ? 'selected' : '' %>>Tất cả</option>
+        <option value="today" <%= query.timeframe === 'today' ? 'selected' : '' %>>Hôm nay</option>
+        <option value="overdue" <%= query.timeframe === 'overdue' ? 'selected' : '' %>>Đã quá hạn</option>
+      </select>
+    </div>
+
+    <div style="flex: 1; min-width: 140px;">
+      <label class="form-label" style="font-size: 11px;">Trạng thái</label>
+      <select name="status" class="form-control">
+        <option value="all" <%= query.status === 'all' || !query.status ? 'selected' : '' %>>Tất cả</option>
+        <option value="todo" <%= query.status === 'todo' ? 'selected' : '' %>>Chưa xong (Todo)</option>
+        <option value="done" <%= query.status === 'done' ? 'selected' : '' %>>Đã hoàn thành</option>
+      </select>
+    </div>
+
+    <% if (isManager) { %>
+      <div style="flex: 1; min-width: 150px;">
+        <label class="form-label" style="font-size: 11px;">Nhân viên</label>
+        <select name="assigned_to" class="form-control">
+          <option value="">-- Tất cả nhân viên --</option>
+          <% users.forEach(u => { %>
+            <option value="<%= u.id %>" <%= query.assigned_to == u.id ? 'selected' : '' %>><%= u.full_name %></option>
+          <% }) %>
+        </select>
+      </div>
+    <% } %>
+
+    <div>
+      <button type="submit" class="btn btn-secondary">🔍 Lọc</button>
+      <a href="/tasks" class="btn btn-secondary">Xóa lọc</a>
+    </div>
+  </form>
+</div>
+
+<!-- Bảng Nhắc Việc -->
+<div class="card" style="padding: 0;">
+  <div class="table-responsive">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th style="width: 40px;">Xong</th>
+          <th>Công việc</th>
+          <th>Khách hàng</th>
+          <th>Người nhận việc</th>
+          <th>Hạn chót</th>
+          <th>Cảnh báo</th>
+          <th>Thao tác</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (tasks.length === 0) { %>
+          <tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 32px;">Không có nhắc việc nào.</td></tr>
+        <% } %>
+        <% tasks.forEach(task => { %>
+          <tr style="<%= task.status === 'done' ? 'opacity: 0.6;' : '' %>">
+            <td>
+              <form action="/tasks/<%= task.id %>/toggle" method="POST" style="margin: 0;">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <input type="checkbox" onchange="this.form.submit()" <%= task.status === 'done' ? 'checked' : '' %> style="cursor: pointer; width: 16px; height: 16px;">
+              </form>
+            </td>
+            <td>
+              <div style="font-weight: 600; <%= task.status === 'done' ? 'text-decoration: line-through;' : '' %>">
+                <%= task.title %>
+              </div>
+              <% if (task.description) { %>
+                <div style="font-size: 12px; color: var(--text-muted);"><%= task.description %></div>
+              <% } %>
+            </td>
+            <td>
+              <% if (task.customer_name) { %>
+                <a href="/customers/<%= task.customer_id %>" style="color: var(--primary); text-decoration: none;"><%= task.customer_name %></a>
+              <% } else { %>
+                <span style="color: var(--text-muted);">-</span>
+              <% } %>
+            </td>
+            <td><%= task.assignee_name %></td>
+            <td><%= new Date(task.due_at).toLocaleString('vi-VN') %></td>
+            <td>
+              <% if (task.status === 'done') { %>
+                <span class="badge badge-new">Đã xong</span>
+              <% } else if (task.is_overdue) { %>
+                <span class="badge badge-urgent">⚠️ Quá hạn</span>
+              <% } else if (task.is_today) { %>
+                <span class="badge badge-medium">Hôm nay</span>
+              <% } else { %>
+                <span style="font-size: 12px; color: var(--text-muted);">Sắp tới</span>
+              <% } %>
+            </td>
+            <td>
+              <form action="/tasks/<%= task.id %>/delete" method="POST" style="margin: 0;" onsubmit="return confirm('Bạn có chắc muốn xóa nhắc việc này?');">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <button type="submit" class="btn btn-danger btn-sm" style="padding: 2px 8px;">Xóa</button>
+              </form>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

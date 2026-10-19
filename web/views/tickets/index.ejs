@@ -1,0 +1,189 @@
+<%- include('../partials/header') %>
+
+<div class="page-header">
+  <div>
+    <h1 class="page-title"><%= title %></h1>
+    <p style="color: var(--text-muted); font-size: 13px; margin-top: 4px;">
+      Cam kết SLA: Khẩn cấp (4h), Cao (8h), Trung bình (24h), Thấp (72h)
+    </p>
+  </div>
+  <div class="page-actions">
+    <button class="btn btn-primary" onclick="document.getElementById('modal-new-ticket').style.display = 'block';">➕ Tạo Ticket Mới</button>
+  </div>
+</div>
+
+<!-- Modal Tạo Ticket Mới -->
+<div id="modal-new-ticket" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 100;">
+  <div class="card" style="max-width: 550px; margin: 60px auto;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+      <h3 style="font-size: 16px;">Tạo Phiếu Yêu Cầu Hỗ Trợ Mới</h3>
+      <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('modal-new-ticket').style.display = 'none';">✕</button>
+    </div>
+    <form action="/tickets" method="POST">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+      <div class="form-group">
+        <label class="form-label">Khách hàng cần hỗ trợ *</label>
+        <select name="customer_id" class="form-control" required>
+          <option value="">-- Chọn khách hàng --</option>
+          <% customers.forEach(c => { %>
+            <option value="<%= c.id %>"><%= c.customer_code %> - <%= c.full_name %></option>
+          <% }) %>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Tiêu đề yêu cầu *</label>
+        <input type="text" name="subject" class="form-control" required placeholder="Tóm tắt vấn đề...">
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Danh mục sự cố *</label>
+          <select name="category" class="form-control" required>
+            <option value="technical">Kỹ thuật (Technical)</option>
+            <option value="billing">Thanh toán / Hóa đơn (Billing)</option>
+            <option value="complaint">Khiếu nại (Complaint)</option>
+            <option value="consulting">Tư vấn (Consulting)</option>
+            <option value="other">Khác</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Mức độ ưu tiên (SLA) *</label>
+          <select name="priority" class="form-control" required>
+            <option value="low">Thấp (SLA 72 giờ)</option>
+            <option value="medium" selected>Trung bình (SLA 24 giờ)</option>
+            <option value="high">Cao (SLA 8 giờ)</option>
+            <option value="urgent">Khẩn cấp (SLA 4 giờ)</option>
+          </select>
+        </div>
+      </div>
+
+      <% if (currentUser.role === 'manager') { %>
+        <div class="form-group">
+          <label class="form-label">Phân công người xử lý</label>
+          <select name="assigned_to" class="form-control">
+            <option value="">-- Chưa phân công --</option>
+            <% users.forEach(u => { %>
+              <option value="<%= u.id %>"><%= u.full_name %></option>
+            <% }) %>
+          </select>
+        </div>
+      <% } %>
+
+      <div class="form-group">
+        <label class="form-label">Mô tả chi tiết *</label>
+        <textarea name="description" rows="4" class="form-control" required placeholder="Mô tả cụ thể sự cố hoặc yêu cầu của khách hàng..."></textarea>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+        <button type="button" class="btn btn-secondary" onclick="document.getElementById('modal-new-ticket').style.display = 'none';">Hủy</button>
+        <button type="submit" class="btn btn-primary">Tạo Ticket</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Bộ lọc Ticket -->
+<div class="card" style="padding: 16px; margin-bottom: 20px;">
+  <form action="/tickets" method="GET" style="display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end;">
+    <div style="flex: 1; min-width: 140px;">
+      <label class="form-label" style="font-size: 11px;">Trạng thái</label>
+      <select name="status" class="form-control">
+        <option value="">-- Tất cả --</option>
+        <option value="open" <%= query.status === 'open' ? 'selected' : '' %>>Mới mở (Open)</option>
+        <option value="in_progress" <%= query.status === 'in_progress' ? 'selected' : '' %>>Đang xử lý</option>
+        <option value="resolved" <%= query.status === 'resolved' ? 'selected' : '' %>>Đã giải quyết</option>
+        <option value="closed" <%= query.status === 'closed' ? 'selected' : '' %>>Đã đóng</option>
+      </select>
+    </div>
+
+    <div style="flex: 1; min-width: 140px;">
+      <label class="form-label" style="font-size: 11px;">Ưu tiên (SLA)</label>
+      <select name="priority" class="form-control">
+        <option value="">-- Tất cả --</option>
+        <option value="urgent" <%= query.priority === 'urgent' ? 'selected' : '' %>>Khẩn cấp (4h)</option>
+        <option value="high" <%= query.priority === 'high' ? 'selected' : '' %>>Cao (8h)</option>
+        <option value="medium" <%= query.priority === 'medium' ? 'selected' : '' %>>Trung bình (24h)</option>
+        <option value="low" <%= query.priority === 'low' ? 'selected' : '' %>>Thấp (72h)</option>
+      </select>
+    </div>
+
+    <div style="flex: 1; min-width: 140px;">
+      <label class="form-label" style="font-size: 11px;">Danh mục</label>
+      <select name="category" class="form-control">
+        <option value="">-- Tất cả --</option>
+        <option value="technical" <%= query.category === 'technical' ? 'selected' : '' %>>Kỹ thuật</option>
+        <option value="billing" <%= query.category === 'billing' ? 'selected' : '' %>>Thanh toán</option>
+        <option value="complaint" <%= query.category === 'complaint' ? 'selected' : '' %>>Khiếu nại</option>
+        <option value="consulting" <%= query.category === 'consulting' ? 'selected' : '' %>>Tư vấn</option>
+        <option value="other" <%= query.category === 'other' ? 'selected' : '' %>>Khác</option>
+      </select>
+    </div>
+
+    <div>
+      <button type="submit" class="btn btn-secondary">🔍 Lọc</button>
+      <a href="/tickets" class="btn btn-secondary">Xóa lọc</a>
+    </div>
+  </form>
+</div>
+
+<!-- Bảng Ticket -->
+<div class="card" style="padding: 0;">
+  <div class="table-responsive">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Mã Ticket</th>
+          <th>Khách hàng</th>
+          <th>Chủ đề</th>
+          <th>Ưu tiên</th>
+          <th>Trạng thái</th>
+          <th>Người xử lý</th>
+          <th>Thời hạn SLA</th>
+          <th>Thao tác</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (tickets.length === 0) { %>
+          <tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 32px;">Không tìm thấy ticket nào.</td></tr>
+        <% } %>
+        <% tickets.forEach(t => { %>
+          <tr>
+            <td>
+              <a href="/tickets/<%= t.id %>" style="font-weight: 700; color: var(--primary); text-decoration: none;">
+                <%= t.ticket_code %>
+              </a>
+            </td>
+            <td>
+              <div style="font-weight: 600;"><%= t.customer_name %></div>
+              <div style="font-size: 11px; color: var(--text-muted);"><%= t.customer_code %></div>
+            </td>
+            <td>
+              <div style="font-weight: 500;"><%= t.subject %></div>
+              <div style="font-size: 11px; color: var(--text-muted);"><%= t.category %> | Tạo bởi: <%= t.creator_name %></div>
+            </td>
+            <td><span class="badge badge-<%= t.priority %>"><%= t.priority %></span></td>
+            <td><span class="badge badge-regular"><%= t.status %></span></td>
+            <td><%= t.assignee_name || 'Chưa nhận' %></td>
+            <td>
+              <% if (t.is_sla_overdue) { %>
+                <span class="badge badge-sla-overdue">⚠️ Quá hạn SLA</span>
+              <% } else if (['resolved', 'closed'].includes(t.status)) { %>
+                <span style="font-size: 12px; color: var(--success);">Đã hoàn thành</span>
+              <% } else { %>
+                <span style="font-size: 12px; color: var(--text-muted);">Trong SLA (<%= slaHours[t.priority] %>h)</span>
+              <% } %>
+            </td>
+            <td>
+              <a href="/tickets/<%= t.id %>" class="btn btn-secondary btn-sm">Xem & Xử lý</a>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

@@ -1,0 +1,199 @@
+<%- include('../partials/header') %>
+
+<div class="page-header">
+  <div>
+    <h1 class="page-title"><%= title %></h1>
+    <p style="color: var(--text-muted); font-size: 13px; margin-top: 4px;">Chào mừng trở lại, <strong><%= currentUser.full_name %></strong> (<%= currentUser.role %>)</p>
+  </div>
+  <% if (isManager) { %>
+    <div class="page-actions">
+      <a href="/customers/export/csv" class="btn btn-secondary">📥 Xuất CSV Khách Hàng</a>
+    </div>
+  <% } %>
+</div>
+
+<% if (isManager) { %>
+  <!-- KPI Metrics Grid cho Manager -->
+  <div class="grid-kpi">
+    <div class="kpi-card">
+      <div class="kpi-title">Khách hàng mới (Tháng này)</div>
+      <div class="kpi-value"><%= newCustomersMonth %></div>
+      <div class="kpi-subtitle">Tổng KH phân khúc đang hoạt động</div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-title">Doanh thu Thắng (Tháng này)</div>
+      <div class="kpi-value"><%= Number(winMetrics.month_won_value).toLocaleString('vi-VN') %> đ</div>
+      <div class="kpi-subtitle">Tổng lũy kế: <%= Number(winMetrics.total_won_value).toLocaleString('vi-VN') %> đ</div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-title">Tỷ lệ Chốt Hợp Đồng Thắng</div>
+      <% 
+        const totalClosed = winMetrics.won_count + winMetrics.lost_count;
+        const winRate = totalClosed > 0 ? Math.round((winMetrics.won_count / totalClosed) * 100) : 0;
+      %>
+      <div class="kpi-value"><%= winRate %>%</div>
+      <div class="kpi-subtitle"><%= winMetrics.won_count %> Thắng / <%= winMetrics.lost_count %> Thua</div>
+    </div>
+
+    <div class="kpi-card" style="<%= slaOverdueCount > 0 ? 'border-color: #fca5a5;' : '' %>">
+      <div class="kpi-title" style="<%= slaOverdueCount > 0 ? 'color: var(--danger);' : '' %>">Ticket Quá Hạn SLA</div>
+      <div class="kpi-value" style="<%= slaOverdueCount > 0 ? 'color: var(--danger);' : '' %>"><%= slaOverdueCount %></div>
+      <div class="kpi-subtitle">Thời gian xử lý TB: <%= avgResolutionHours %> giờ</div>
+    </div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px;">
+    <!-- Biểu đồ Phân khúc Khách hàng -->
+    <div class="card">
+      <h3 style="font-size: 16px; margin-bottom: 16px;">Phân bổ Khách hàng theo Phân khúc</h3>
+      <div class="bar-chart-container">
+        <% 
+          let maxSeg = 1;
+          segments.forEach(s => { if (s.count > maxSeg) maxSeg = s.count; });
+          const segNames = { vip: 'VIP', regular: 'Thường xuyên', new: 'Mới (New)', inactive: 'Ngưng HĐ' };
+        %>
+        <% segments.forEach(s => { %>
+          <div class="bar-item">
+            <span class="bar-label"><%= segNames[s.segment] || s.segment %></span>
+            <div class="bar-track">
+              <div class="bar-fill" style="width: <%= Math.round((s.count / maxSeg) * 100) %>%;"></div>
+            </div>
+            <span class="bar-val"><%= s.count %> KH</span>
+          </div>
+        <% }) %>
+      </div>
+    </div>
+
+    <!-- Biểu đồ Pipeline Cơ hội theo Giai đoạn -->
+    <div class="card">
+      <h3 style="font-size: 16px; margin-bottom: 16px;">Giá trị Pipeline theo Giai đoạn</h3>
+      <div class="bar-chart-container">
+        <% 
+          let maxPipe = 1;
+          pipeline.forEach(p => { if (Number(p.total_value) > maxPipe) maxPipe = Number(p.total_value); });
+          const stageNames = { new: 'Mới tạo', contacted: 'Đã liên hệ', qualified: 'Đủ Đ/K', proposal: 'Gửi đề xuất', won: 'Thành công', lost: 'Thất bại' };
+        %>
+        <% pipeline.forEach(p => { %>
+          <div class="bar-item">
+            <span class="bar-label"><%= stageNames[p.stage] || p.stage %></span>
+            <div class="bar-track">
+              <div class="bar-fill" style="width: <%= Math.round((Number(p.total_value) / maxPipe) * 100) %>%; <%= p.stage === 'won' ? 'background: #16a34a;' : (p.stage === 'lost' ? 'background: #94a3b8;' : '') %>"></div>
+            </div>
+            <span class="bar-val"><%= (Number(p.total_value) / 1000000).toFixed(0) %>M</span>
+          </div>
+        <% }) %>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bảng xếp hạng Nhân viên xuất sắc -->
+  <div class="card">
+    <h3 style="font-size: 16px; margin-bottom: 16px;">Top Nhân viên Kinh doanh xuất sắc</h3>
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Họ và tên</th>
+            <th>Vai trò</th>
+            <th>Số Deal Thắng</th>
+            <th>Tổng Doanh Thu Won</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% topStaff.forEach(staff => { %>
+            <tr>
+              <td><strong><%= staff.full_name %></strong></td>
+              <td><span class="badge badge-regular"><%= staff.role %></span></td>
+              <td><%= staff.won_deals %> đơn</td>
+              <td style="color: var(--success); font-weight: 700;"><%= Number(staff.total_won).toLocaleString('vi-VN') %> đ</td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+<% } else { %>
+  <!-- Dashboard cá nhân cho Sales / Support -->
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+    <!-- Nhắc việc cá nhân -->
+    <div class="card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h3 style="font-size: 16px;">Lịch Nhắc Việc Cần Làm</h3>
+        <a href="/tasks" class="btn btn-secondary btn-sm">Xem tất cả</a>
+      </div>
+      <% if (tasks.length === 0) { %>
+        <p style="color: var(--text-muted); font-size: 13px;">Bạn không có nhắc việc nào đang chờ xử lý.</p>
+      <% } else { %>
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <% tasks.forEach(task => { %>
+            <div style="padding: 12px; border: 1px solid var(--border-color); border-radius: var(--radius); display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <div style="font-weight: 600; font-size: 14px;"><%= task.title %></div>
+                <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
+                  Hạn chót: <%= new Date(task.due_at).toLocaleDateString('vi-VN') %>
+                  <% if (task.customer_name) { %> | KH: <%= task.customer_name %><% } %>
+                </div>
+              </div>
+              <form action="/tasks/<%= task.id %>/toggle" method="POST" style="margin: 0;">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <button type="submit" class="btn btn-success btn-sm">Xong</button>
+              </form>
+            </div>
+          <% }) %>
+        </div>
+      <% } %>
+    </div>
+
+    <!-- Cơ hội hoặc Ticket đang phụ trách -->
+    <div class="card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h3 style="font-size: 16px;">Phiếu Hỗ trợ & Cơ hội Đang Theo Dõi</h3>
+      </div>
+      <% if (currentUser.role === 'support') { %>
+        <% if (tickets.length === 0) { %>
+          <p style="color: var(--text-muted); font-size: 13px;">Không có ticket nào đang chờ xử lý.</p>
+        <% } else { %>
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <% tickets.forEach(t => { %>
+              <div style="padding: 12px; border: 1px solid var(--border-color); border-radius: var(--radius); display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <a href="/tickets/<%= t.id %>" style="font-weight: 600; text-decoration: none; color: var(--primary); font-size: 13px;"><%= t.ticket_code %>: <%= t.subject %></a>
+                  <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">KH: <%= t.customer_name %></div>
+                </div>
+                <% if (t.is_sla_overdue) { %>
+                  <span class="badge badge-sla-overdue">Quá hạn SLA</span>
+                <% } else { %>
+                  <span class="badge badge-<%= t.priority %>"><%= t.priority %></span>
+                <% } %>
+              </div>
+            <% }) %>
+          </div>
+        <% } %>
+      <% } else { %>
+        <% if (opportunities.length === 0) { %>
+          <p style="color: var(--text-muted); font-size: 13px;">Bạn chưa có cơ hội bán hàng nào đang mở.</p>
+        <% } else { %>
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <% opportunities.forEach(opp => { %>
+              <div style="padding: 12px; border: 1px solid var(--border-color); border-radius: var(--radius); display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <div style="font-weight: 600; font-size: 13px;"><%= opp.title %></div>
+                  <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">KH: <%= opp.customer_name %></div>
+                </div>
+                <div style="text-align: right;">
+                  <div style="color: var(--success); font-weight: 700; font-size: 13px;"><%= Number(opp.value).toLocaleString('vi-VN') %> đ</div>
+                  <span class="badge badge-regular"><%= opp.stage %></span>
+                </div>
+              </div>
+            <% }) %>
+          </div>
+        <% } %>
+      <% } %>
+    </div>
+  </div>
+<% } %>
+
+<%- include('../partials/footer') %>

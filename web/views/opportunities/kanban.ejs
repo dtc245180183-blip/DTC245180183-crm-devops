@@ -1,0 +1,152 @@
+<%- include('../partials/header') %>
+
+<div class="page-header">
+  <div>
+    <h1 class="page-title"><%= title %></h1>
+    <p style="color: var(--text-muted); font-size: 13px; margin-top: 4px;">
+      Tổng giá trị Pipeline đang mở: <strong style="color: var(--success);"><%= Number(totalPipelineValue).toLocaleString('vi-VN') %> VNĐ</strong>
+    </p>
+  </div>
+  <% if (canEdit) { %>
+    <div class="page-actions">
+      <button class="btn btn-primary" onclick="document.getElementById('modal-new-opp').style.display = 'block';">➕ Thêm Cơ Hội</button>
+    </div>
+  <% } %>
+</div>
+
+<!-- Modal Thêm Cơ Hội Mới -->
+<div id="modal-new-opp" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 100;">
+  <div class="card" style="max-width: 500px; margin: 80px auto;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+      <h3 style="font-size: 16px;">Thêm Cơ Hội Bán Hàng Mới</h3>
+      <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('modal-new-opp').style.display = 'none';">✕</button>
+    </div>
+    <form action="/opportunities" method="POST">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+      <div class="form-group">
+        <label class="form-label">Khách hàng mục tiêu *</label>
+        <select name="customer_id" class="form-control" required>
+          <option value="">-- Chọn khách hàng --</option>
+          <% customers.forEach(c => { %>
+            <option value="<%= c.id %>"><%= c.customer_code %> - <%= c.full_name %></option>
+          <% }) %>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Tên cơ hội / Dự án *</label>
+        <input type="text" name="title" class="form-control" required placeholder="Ví dụ: Nâng cấp gói Enterprise 2026">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Giá trị dự kiến (VNĐ) *</label>
+        <input type="number" name="value" class="form-control" min="0" required placeholder="Ví dụ: 50000000">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Ngày dự kiến chốt (Expected Close)</label>
+        <input type="date" name="expected_close" class="form-control">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Nhân viên phụ trách</label>
+        <select name="owner_id" class="form-control">
+          <% users.forEach(u => { %>
+            <option value="<%= u.id %>" <%= currentUser.id == u.id ? 'selected' : '' %>><%= u.full_name %></option>
+          <% }) %>
+        </select>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+        <button type="button" class="btn btn-secondary" onclick="document.getElementById('modal-new-opp').style.display = 'none';">Hủy</button>
+        <button type="submit" class="btn btn-primary">Tạo Cơ Hội</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal Báo Thất Bại (Lost Reason) -->
+<div id="modal-lost-opp" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 100;">
+  <div class="card" style="max-width: 450px; margin: 100px auto;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+      <h3 style="font-size: 16px; color: var(--danger);">Đánh dấu Thất Bại (Lost)</h3>
+      <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('modal-lost-opp').style.display = 'none';">✕</button>
+    </div>
+    <form id="form-lost-opp" method="POST">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <input type="hidden" name="target_stage" value="lost">
+
+      <div class="form-group">
+        <label class="form-label">Lý do thất bại bắt buộc *</label>
+        <textarea name="lost_reason" rows="3" class="form-control" required placeholder="Nhập lý do khách hàng từ chối (giá cao, chọn đối thủ, hủy dự án...)"></textarea>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px;">
+        <button type="button" class="btn btn-secondary" onclick="document.getElementById('modal-lost-opp').style.display = 'none';">Hủy</button>
+        <button type="submit" class="btn btn-danger">Xác Nhận Thất Bại</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Pure CSS Kanban Board -->
+<div class="kanban-board">
+  <% const stageKeys = ['new', 'contacted', 'qualified', 'proposal', 'won', 'lost']; %>
+  <% stageKeys.forEach(stageKey => { %>
+    <% const cfg = stageConfig[stageKey]; %>
+    <% const oppList = stages[stageKey]; %>
+    <div class="kanban-col">
+      <div class="kanban-header">
+        <span class="kanban-title"><%= cfg.label %> (<%= cfg.prob %>%)</span>
+        <span class="kanban-count"><%= oppList.length %></span>
+      </div>
+
+      <div class="kanban-cards">
+        <% if (oppList.length === 0) { %>
+          <div style="font-size: 11px; color: #94a3b8; text-align: center; padding: 20px 0;">Trống</div>
+        <% } %>
+        <% oppList.forEach(opp => { %>
+          <div class="kanban-card">
+            <div class="kanban-card-title"><%= opp.title %></div>
+            <div class="kanban-card-val"><%= Number(opp.value).toLocaleString('vi-VN') %> đ</div>
+            <div class="kanban-card-meta">
+              <span>🏢 <a href="/customers/<%= opp.customer_id %>" style="color: var(--primary); text-decoration: none;"><%= opp.customer_name %></a></span>
+              <span>👤 <%= opp.owner_name %></span>
+              <% if (opp.expected_close) { %>
+                <span>📅 Hạn: <%= new Date(opp.expected_close).toLocaleDateString('vi-VN') %></span>
+              <% } %>
+              <% if (opp.lost_reason) { %>
+                <span style="color: var(--danger); margin-top: 4px;">⚠️ <%= opp.lost_reason %></span>
+              <% } %>
+            </div>
+
+            <% if (canEdit && cfg.next) { %>
+              <div class="kanban-card-actions">
+                <!-- Nút Tiến Tuần Tự -->
+                <form action="/opportunities/<%= opp.id %>/stage" method="POST" style="margin: 0; flex: 1;">
+                  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                  <input type="hidden" name="target_stage" value="<%= cfg.next %>">
+                  <button type="submit" class="btn btn-primary btn-sm" style="width: 100%; font-size: 11px;">
+                    ▶ <%= stageConfig[cfg.next].label %>
+                  </button>
+                </form>
+
+                <!-- Nút Đánh Dấu Thất Bại -->
+                <button type="button" class="btn btn-secondary btn-sm" style="color: var(--danger); font-size: 11px;"
+                        onclick="
+                          document.getElementById('form-lost-opp').action = '/opportunities/<%= opp.id %>/stage';
+                          document.getElementById('modal-lost-opp').style.display = 'block';
+                        ">
+                  ✕ Lost
+                </button>
+              </div>
+            <% } %>
+          </div>
+        <% }) %>
+      </div>
+    </div>
+  <% }) %>
+</div>
+
+<%- include('../partials/footer') %>

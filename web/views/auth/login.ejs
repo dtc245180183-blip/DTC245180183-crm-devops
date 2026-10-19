@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %> | CRM System</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="auth-wrapper">
+  <div class="auth-card">
+    <div style="text-align: center; margin-bottom: 28px;">
+      <div class="brand-icon" style="margin: 0 auto 12px auto; width: 48px; height: 48px; font-size: 22px;">CRM</div>
+      <h1 style="font-size: 22px; font-weight: 700; color: #0f172a;">Đăng nhập CRM</h1>
+      <p style="font-size: 13px; color: #64748b; margin-top: 4px;">Hệ thống Quản lý & Chăm sóc Khách hàng</p>
+    </div>
+
+    <% if (error) { %>
+      <div class="alert alert-danger"><%= error %></div>
+    <% } %>
+
+    <form action="/auth/login" method="POST">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+      <div class="form-group">
+        <label class="form-label" for="username">Tên đăng nhập</label>
+        <input type="text" id="username" name="username" class="form-control" value="<%= username %>" required autofocus placeholder="Ví dụ: admin, sales01, support01">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="password">Mật khẩu</label>
+        <input type="password" id="password" name="password" class="form-control" required placeholder="Nhập mật khẩu của bạn">
+      </div>
+
+      <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 11px; margin-top: 8px;">
+        Đăng Nhập
+      </button>
+    </form>
+
+    <div style="margin-top: 24px; text-align: center; font-size: 11px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 16px;">
+      Bài tập lớn Triển khai & Quản trị Hệ thống Phần mềm<br>
+      Dương Tiến Dũng - DTC245180183
+    </div>
+  </div>
+</div>
+</body>
+</html>

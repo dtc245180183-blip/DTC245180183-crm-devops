@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %> | CRM Hệ Thống Chăm Sóc Khách Hàng</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<aside class="sidebar">
+  <div class="sidebar-header">
+    <div class="brand-icon">CRM</div>
+    <div>
+      <div class="brand-title">CRM System</div>
+      <div class="brand-subtitle">Chăm sóc Khách hàng</div>
+    </div>
+  </div>
+
+  <nav class="sidebar-nav">
+    <div class="nav-section-title">Tổng quan & Nghiệp vụ</div>
+    <a href="/dashboard" class="nav-link <%= currentPath === '/dashboard' ? 'active' : '' %>">
+      <span>📊</span> Dashboard KPI
+    </a>
+    <a href="/customers" class="nav-link <%= currentPath.startsWith('/customers') ? 'active' : '' %>">
+      <span>👥</span> Khách hàng
+    </a>
+    <a href="/opportunities" class="nav-link <%= currentPath.startsWith('/opportunities') ? 'active' : '' %>">
+      <span>🎯</span> Pipeline Cơ hội
+    </a>
+    <a href="/tickets" class="nav-link <%= currentPath.startsWith('/tickets') ? 'active' : '' %>">
+      <span>🎫</span> Phiếu Hỗ trợ (SLA)
+    </a>
+    <a href="/tasks" class="nav-link <%= currentPath.startsWith('/tasks') ? 'active' : '' %>">
+      <span>⏰</span> Lịch Nhắc việc
+    </a>
+
+    <% if (currentUser && currentUser.role === 'manager') { %>
+      <div class="nav-section-title">Quản trị Hệ thống</div>
+      <a href="/users" class="nav-link <%= currentPath.startsWith('/users') ? 'active' : '' %>">
+        <span>⚙️</span> Quản lý Nhân viên
+      </a>
+    <% } %>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="user-badge">
+      <div class="user-avatar"><%= currentUser ? currentUser.full_name.charAt(0) : 'U' %></div>
+      <div class="user-meta">
+        <span class="user-name"><%= currentUser ? currentUser.full_name : '' %></span>
+        <span class="user-role"><%= currentUser ? currentUser.role : '' %></span>
+      </div>
+    </div>
+    <form action="/auth/logout" method="POST" style="margin: 0;">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <button type="submit" class="btn-logout" title="Đăng xuất">🚪</button>
+    </form>
+  </div>
+</aside>
+
+<main class="main-content">

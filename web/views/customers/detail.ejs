@@ -1,0 +1,295 @@
+<%- include('../partials/header') %>
+
+<div class="page-header">
+  <div>
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <h1 class="page-title"><%= customer.full_name %></h1>
+      <span class="badge badge-<%= customer.segment %>"><%= customer.segment %></span>
+      <% if (customer.is_archived) { %>
+        <span class="badge" style="background: #e2e8f0; color: #475569;">Đã Lưu Trữ</span>
+      <% } %>
+    </div>
+    <p style="color: var(--text-muted); font-size: 13px; margin-top: 4px;">
+      Mã: <strong><%= customer.customer_code %></strong> | Công ty: <strong><%= customer.company || 'Cá nhân' %></strong>
+      | Phụ trách: <strong><%= customer.owner_name || 'Chưa có' %></strong>
+    </p>
+  </div>
+  <div class="page-actions">
+    <% if (['sales', 'manager'].includes(currentUser.role)) { %>
+      <a href="/customers/<%= customer.id %>/edit" class="btn btn-secondary">✏️ Chỉnh Sửa</a>
+    <% } %>
+
+    <% if (currentUser.role === 'manager') { %>
+      <% if (!customer.is_archived) { %>
+        <form action="/customers/<%= customer.id %>/archive" method="POST" style="margin:0;" onsubmit="return confirm('Bạn có chắc muốn lưu trữ khách hàng này?');">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <button type="submit" class="btn btn-secondary" style="color: var(--warning);">📦 Lưu Trữ</button>
+        </form>
+      <% } else { %>
+        <form action="/customers/<%= customer.id %>/restore" method="POST" style="margin:0;">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <button type="submit" class="btn btn-secondary" style="color: var(--success);">♻️ Khôi Phục</button>
+        </form>
+      <% } %>
+    <% } %>
+    <a href="/customers" class="btn btn-secondary">Quay lại</a>
+  </div>
+</div>
+
+<!-- Tabs Navigation -->
+<div class="tab-nav">
+  <a href="/customers/<%= customer.id %>?tab=info" class="tab-btn <%= tab === 'info' ? 'active' : '' %>">Hồ Sơ Chi Tiết</a>
+  <a href="/customers/<%= customer.id %>?tab=interactions" class="tab-btn <%= tab === 'interactions' ? 'active' : '' %>">Lịch Sử Tương Tác (<%= interactions.length %>)</a>
+  <a href="/customers/<%= customer.id %>?tab=opportunities" class="tab-btn <%= tab === 'opportunities' ? 'active' : '' %>">Cơ Hội Bán Hàng (<%= opportunities.length %>)</a>
+  <a href="/customers/<%= customer.id %>?tab=tickets" class="tab-btn <%= tab === 'tickets' ? 'active' : '' %>">Phiếu Hỗ Trợ (<%= tickets.length %>)</a>
+  <a href="/customers/<%= customer.id %>?tab=tasks" class="tab-btn <%= tab === 'tasks' ? 'active' : '' %>">Lịch Nhắc Việc (<%= tasks.length %>)</a>
+</div>
+
+<!-- TAB 1: THÔNG TIN CHI TIẾT -->
+<% if (tab === 'info') { %>
+  <div class="card" style="max-width: 800px;">
+    <h3 style="font-size: 16px; margin-bottom: 20px;">Thông tin liên hệ & Phân loại</h3>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+      <div>
+        <label style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Email liên lạc</label>
+        <p style="font-size: 14px; font-weight: 500; margin-top: 4px;"><%= customer.email || 'Chưa cung cấp' %></p>
+      </div>
+      <div>
+        <label style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Số điện thoại</label>
+        <p style="font-size: 14px; font-weight: 500; margin-top: 4px;"><%= customer.phone || 'Chưa cung cấp' %></p>
+      </div>
+      <div>
+        <label style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Địa chỉ</label>
+        <p style="font-size: 14px; font-weight: 500; margin-top: 4px;"><%= customer.address || 'Chưa cung cấp' %></p>
+      </div>
+      <div>
+        <label style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Nguồn tiếp cận</label>
+        <p style="font-size: 14px; font-weight: 500; margin-top: 4px;"><%= customer.source %></p>
+      </div>
+      <div>
+        <label style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Ngày tạo hồ sơ</label>
+        <p style="font-size: 14px; font-weight: 500; margin-top: 4px;"><%= new Date(customer.created_at).toLocaleString('vi-VN') %></p>
+      </div>
+      <div>
+        <label style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Cập nhật lần cuối</label>
+        <p style="font-size: 14px; font-weight: 500; margin-top: 4px;"><%= new Date(customer.updated_at).toLocaleString('vi-VN') %></p>
+      </div>
+    </div>
+
+    <% if (customer.notes) { %>
+      <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border-color);">
+        <label style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Ghi chú nội bộ</label>
+        <p style="font-size: 14px; margin-top: 6px; line-height: 1.5;"><%= customer.notes %></p>
+      </div>
+    <% } %>
+  </div>
+<% } %>
+
+<!-- TAB 2: TƯƠNG TÁC (TIMELINE) -->
+<% if (tab === 'interactions') { %>
+  <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px;">
+    <!-- Dòng thời gian -->
+    <div>
+      <h3 style="font-size: 16px; margin-bottom: 20px;">Dòng thời gian chăm sóc</h3>
+      <% if (interactions.length === 0) { %>
+        <div class="card" style="text-align: center; color: var(--text-muted);">Chưa có lịch sử tương tác nào với khách hàng này.</div>
+      <% } else { %>
+        <div class="timeline">
+          <% interactions.forEach(it => { %>
+            <div class="timeline-item">
+              <div class="timeline-point"></div>
+              <div class="timeline-content">
+                <div class="timeline-header">
+                  <span class="timeline-title">
+                    <span class="badge badge-regular" style="margin-right: 6px;"><%= it.type %></span>
+                    <%= it.subject %>
+                  </span>
+                  <span class="timeline-time"><%= new Date(it.occurred_at).toLocaleString('vi-VN') %></span>
+                </div>
+                <p style="font-size: 13px; color: var(--text-main); margin-bottom: 10px; line-height: 1.5;"><%= it.content %></p>
+                <div style="font-size: 11px; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center;">
+                  <span>Ghi nhận bởi: <strong><%= it.user_name %></strong> (<%= it.user_role %>)</span>
+                  <% if (currentUser.role === 'manager' || it.user_id === currentUser.id) { %>
+                    <form action="/interactions/<%= it.id %>/delete" method="POST" style="margin:0;" onsubmit="return confirm('Bạn có chắc muốn xóa tương tác này?');">
+                      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                      <button type="submit" class="btn btn-danger btn-sm" style="padding: 2px 6px;">Xóa</button>
+                    </form>
+                  <% } %>
+                </div>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+      <% } %>
+    </div>
+
+    <!-- Form Thêm Tương Tác Mới -->
+    <div>
+      <div class="card">
+        <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 16px;">Ghi nhận tương tác mới</h4>
+        <form action="/interactions" method="POST">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <input type="hidden" name="customer_id" value="<%= customer.id %>">
+
+          <div class="form-group">
+            <label class="form-label" style="font-size: 12px;">Loại tương tác</label>
+            <select name="type" class="form-control" required>
+              <option value="call">📞 Cuộc gọi</option>
+              <option value="email">✉️ Email</option>
+              <option value="meeting">🤝 Cuộc họp</option>
+              <option value="note">📝 Ghi chú</option>
+              <option value="chat">💬 Tin nhắn / Chat</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" style="font-size: 12px;">Tiêu đề</label>
+            <input type="text" name="subject" class="form-control" required placeholder="Nhập tiêu đề tóm tắt...">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" style="font-size: 12px;">Nội dung chi tiết</label>
+            <textarea name="content" rows="4" class="form-control" required placeholder="Chi tiết nội dung trao đổi..."></textarea>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" style="font-size: 12px;">Thời gian diễn ra</label>
+            <input type="datetime-local" name="occurred_at" class="form-control">
+          </div>
+
+          <button type="submit" class="btn btn-primary" style="width: 100%;">Lưu Tương Tác</button>
+        </form>
+      </div>
+    </div>
+  </div>
+<% } %>
+
+<!-- TAB 3: CƠ HỘI BÁN HÀNG -->
+<% if (tab === 'opportunities') { %>
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+    <h3 style="font-size: 16px;">Danh sách Cơ hội Bán hàng</h3>
+    <a href="/opportunities" class="btn btn-secondary btn-sm">Xem Pipeline Kanban</a>
+  </div>
+
+  <div class="card" style="padding: 0;">
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Tiêu đề Cơ hội</th>
+            <th>Giá trị (VNĐ)</th>
+            <th>Giai đoạn</th>
+            <th>Xác suất</th>
+            <th>Người phụ trách</th>
+            <th>Dự kiến đóng</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (opportunities.length === 0) { %>
+            <tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 24px;">Chưa có cơ hội nào cho khách hàng này.</td></tr>
+          <% } %>
+          <% opportunities.forEach(opp => { %>
+            <tr>
+              <td><strong><%= opp.title %></strong></td>
+              <td style="color: var(--success); font-weight: 700;"><%= Number(opp.value).toLocaleString('vi-VN') %> đ</td>
+              <td><span class="badge badge-regular"><%= opp.stage %></span></td>
+              <td><%= opp.probability %>%</td>
+              <td><%= opp.owner_name %></td>
+              <td><%= opp.expected_close ? new Date(opp.expected_close).toLocaleDateString('vi-VN') : '-' %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+<% } %>
+
+<!-- TAB 4: TICKETS HỖ TRỢ -->
+<% if (tab === 'tickets') { %>
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+    <h3 style="font-size: 16px;">Danh sách Phiếu Hỗ trợ (SLA)</h3>
+    <a href="/tickets" class="btn btn-secondary btn-sm">Xem tất cả Tickets</a>
+  </div>
+
+  <div class="card" style="padding: 0;">
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Mã Ticket</th>
+            <th>Chủ đề</th>
+            <th>Mức ưu tiên</th>
+            <th>Trạng thái</th>
+            <th>Người xử lý</th>
+            <th>Cảnh báo SLA</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (tickets.length === 0) { %>
+            <tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 24px;">Không có phiếu hỗ trợ nào.</td></tr>
+          <% } %>
+          <% tickets.forEach(t => { %>
+            <tr>
+              <td><a href="/tickets/<%= t.id %>" style="color: var(--primary); font-weight: 700; text-decoration: none;"><%= t.ticket_code %></a></td>
+              <td><%= t.subject %></td>
+              <td><span class="badge badge-<%= t.priority %>"><%= t.priority %></span></td>
+              <td><span class="badge badge-regular"><%= t.status %></span></td>
+              <td><%= t.assignee_name || 'Chưa nhận' %></td>
+              <td>
+                <% if (t.is_sla_overdue) { %>
+                  <span class="badge badge-sla-overdue">Quá hạn SLA</span>
+                <% } else { %>
+                  <span style="font-size: 12px; color: var(--success);">Trong hạn</span>
+                <% } %>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+<% } %>
+
+<!-- TAB 5: LỊCH NHẮC VIỆC -->
+<% if (tab === 'tasks') { %>
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+    <h3 style="font-size: 16px;">Lịch Nhắc Việc Liên Quan</h3>
+    <a href="/tasks" class="btn btn-secondary btn-sm">Xem Lịch Nhắc Việc</a>
+  </div>
+
+  <div class="card" style="padding: 0;">
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Tiêu đề việc</th>
+            <th>Người được giao</th>
+            <th>Hạn hoàn thành</th>
+            <th>Trạng thái</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (tasks.length === 0) { %>
+            <tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 24px;">Chưa có nhắc việc nào được thiết lập.</td></tr>
+          <% } %>
+          <% tasks.forEach(task => { %>
+            <tr>
+              <td><strong><%= task.title %></strong></td>
+              <td><%= task.assignee_name %></td>
+              <td><%= new Date(task.due_at).toLocaleDateString('vi-VN') %></td>
+              <td>
+                <% if (task.status === 'done') { %>
+                  <span class="badge badge-new">Đã xong</span>
+                <% } else { %>
+                  <span class="badge badge-regular">Chờ làm</span>
+                <% } %>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+<% } %>
+
+<%- include('../partials/footer') %>
