@@ -287,3 +287,14 @@ INSERT INTO tasks (title, description, customer_id, assigned_to, created_by, due
 ('Thu hồi tài khoản dùng thử quá hạn 30 ngày', 'Lọc danh sách các tài khoản khách hàng chưa gia hạn.', NULL, 4, 1, NOW() - INTERVAL '1 days', 'done', NOW() - INTERVAL '5 days', NOW() - INTERVAL '1 days'),
 ('Cập nhật mẫu biên bản nghiệm thu phần mềm 2026', 'Thêm điều khoản cam kết bảo mật thông tin.', NULL, 3, 1, NOW() - INTERVAL '3 days', 'done', NOW() - INTERVAL '7 days', NOW() - INTERVAL '3 days');
 
+
+
+-- 8. TÀI KHOẢN GIÁM SÁT PROMETHEUS POSTGRES EXPORTER (Quyền tối thiểu pg_monitor)
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'exporter') THEN
+    CREATE USER exporter WITH LOGIN PASSWORD 'exporter_password_configured_via_env';
+    GRANT pg_monitor TO exporter;
+  END IF;
+END
+$$;
