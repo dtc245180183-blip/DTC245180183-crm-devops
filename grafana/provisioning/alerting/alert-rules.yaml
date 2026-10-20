@@ -1,0 +1,145 @@
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: crm-security-alerts
+    folder: Security
+    interval: 10s
+    rules:
+      - uid: crm-brute-force-login
+        title: CRM - Brute force login
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 60
+              to: 0
+            datasourceUid: loki
+            model:
+              editorMode: code
+              expr: sum(count_over_time({job="webapp"} |= "LOGIN_FAILED" [1m]))
+              queryType: range
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params: []
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - B
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              reducer: last
+              refId: B
+              type: reduce
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 3
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - C
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: $B > 3
+              refId: C
+              type: math
+        noDataState: OK
+        execErrState: Error
+        for: 0s
+        annotations:
+          summary: "Phát hiện tấn công dò mật khẩu (brute force) vào CRM"
+          description: "Đã ghi nhận hơn 3 lần đăng nhập thất bại trong vòng 1 phút ({job=\"webapp\"} |= \"LOGIN_FAILED\"). Hướng dẫn truy vết: Sử dụng LogQL để kiểm tra IP nguồn, username bị nhắm tới và đối chiếu access log của Nginx."
+        labels:
+          severity: critical
+
+      - uid: crm-rate-limit-exceeded
+        title: CRM - Login bi gioi han (429)
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 60
+              to: 0
+            datasourceUid: loki
+            model:
+              editorMode: code
+              expr: sum(count_over_time({job="nginx", status="429"} [1m]))
+              queryType: range
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params: []
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - B
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              reducer: last
+              refId: B
+              type: reduce
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 5
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - C
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: $B > 5
+              refId: C
+              type: math
+        noDataState: OK
+        execErrState: Error
+        for: 0s
+        annotations:
+          summary: "Phát hiện tần suất đăng nhập vượt ngưỡng Rate Limit Nginx (HTTP 429)"
+          description: "Ghi nhận hơn 5 yêu cầu đăng nhập nhận mã 429 từ Nginx trong vòng 1 phút. Dấu hiệu hệ thống đang chủ động giảm thiểu tấn công Brute Force."
+        labels:
+          severity: warning

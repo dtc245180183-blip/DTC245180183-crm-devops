@@ -11,7 +11,7 @@
   "panels": [
     {
       "id": 1,
-      "title": "Container Memory Usage (RAM)",
+      "title": "Tổng RAM máy ảo Docker Desktop (RAM Usage)",
       "type": "timeseries",
       "datasource": {
         "type": "prometheus",
@@ -49,7 +49,7 @@
     },
     {
       "id": 2,
-      "title": "Container CPU Usage (Rate)",
+      "title": "Tổng CPU máy ảo Docker Desktop (CPU Rate)",
       "type": "timeseries",
       "datasource": {
         "type": "prometheus",
@@ -87,7 +87,7 @@
     },
     {
       "id": 3,
-      "title": "Network Receive I/O (Bytes/s)",
+      "title": "Tổng Network Receive I/O máy ảo Docker Desktop (Bytes/s)",
       "type": "timeseries",
       "datasource": {
         "type": "prometheus",
@@ -125,7 +125,7 @@
     },
     {
       "id": 4,
-      "title": "Network Transmit I/O (Bytes/s)",
+      "title": "Tổng Network Transmit I/O máy ảo Docker Desktop (Bytes/s)",
       "type": "timeseries",
       "datasource": {
         "type": "prometheus",
@@ -182,7 +182,8 @@
     ]
   },
   "timezone": "browser",
-  "title": "CRM - Containers",
+  "title": "CRM - Containers (Tổng tài nguyên máy ảo Docker Desktop)",
   "uid": "crm-containers",
-  "version": 1
+  "version": 1,
+  "description": "Giám sát tổng tài nguyên máy ảo Docker Desktop WSL2 thu thập qua cAdvisor (do giới hạn kiến trúc WSL2 của Docker Desktop không ánh xạ layerdb của từng container vào mount namespace của cAdvisor)."
 }

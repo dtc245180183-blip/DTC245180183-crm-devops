@@ -1,0 +1,60 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+  log_level: info
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  - job_name: docker
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 5s
+        filters:
+          - name: label
+            values: ["com.docker.compose.project=crm"]
+
+    relabel_configs:
+      - source_labels: ['__meta_docker_container_label_com_docker_compose_project']
+        regex: 'crm'
+        action: keep
+
+      - source_labels: ['__meta_docker_container_name']
+        regex: '/?(.*)'
+        target_label: 'container'
+
+      - source_labels: ['__meta_docker_container_label_com_docker_compose_service']
+        target_label: 'compose_service'
+
+      - source_labels: ['__meta_docker_container_label_com_docker_compose_service']
+        regex: 'web'
+        target_label: 'job'
+        replacement: 'webapp'
+
+      - source_labels: ['__meta_docker_container_label_com_docker_compose_service']
+        regex: 'db'
+        target_label: 'job'
+        replacement: 'postgres'
+
+      - source_labels: ['__meta_docker_container_label_com_docker_compose_service']
+        regex: 'nginx'
+        target_label: 'job'
+        replacement: 'nginx'
+
+      - source_labels: ['job']
+        regex: '^$'
+        target_label: 'job'
+        replacement: 'other'
+
+    pipeline_stages:
+      - match:
+          selector: '{job="nginx"}'
+          stages:
+            - regex:
+                expression: '^(?P<client_ip>\S+) - (?P<remote_user>\S+) \[(?P<time_local>[^\]]+)\] "(?P<request>[^"]+)" (?P<status>\d{3}) (?P<body_bytes_sent>\d+) "(?P<referer>[^"]*)" "(?P<user_agent>[^"]*)" "(?P<x_forwarded_for>[^"]*)" rt=(?P<request_time>\S+)'
+            - labels:
+                status:

@@ -32,16 +32,26 @@ app.use(express.static(path.join(__dirname, '../public')));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 app.use(express.json({ limit: '1mb' }));
 
+// Thiết lập trust proxy để express-session nhận diện đúng kết nối HTTPS qua Nginx
+app.set('trust proxy', 1);
+
+// Kiểm tra nghiêm ngặt biến môi trường SESSION_SECRET (không dùng giá trị dự phòng, tối thiểu 32 ký tự)
+const sessionSecret = process.env.SESSION_SECRET;
+if (!sessionSecret || sessionSecret.trim().length < 32) {
+  console.error('[FATAL] SESSION_SECRET is missing or shorter than 32 characters. Aborting start.');
+  process.exit(1);
+}
+
 // Quản lý phiên làm việc (Session)
 app.use(session({
   name: 'crm_session',
-  secret: process.env.SESSION_SECRET || 'crm_secret_session_key_at_least_32_chars',
+  secret: sessionSecret,
   resave: false,
   saveUninitialized: false,
   cookie: {
     httpOnly: true,
     sameSite: 'strict',
-    secure: false, // sẽ tự động kích hoạt khi có HTTPS Nginx qua trust proxy hoặc sau này
+    secure: true, // Cố định true: chỉ truyền cookie qua HTTPS
     maxAge: 24 * 60 * 60 * 1000 // 24 giờ
   }
 }));

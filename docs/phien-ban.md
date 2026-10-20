@@ -15,4 +15,5 @@ Tất cả các dịch vụ trong hệ thống CRM đều sử dụng Docker Ima
 | 9 | Postgres Exporter | `prometheuscommunity/postgres-exporter:v0.16.0` | Postgres Exporter v0.16.0 | Xuất chỉ số CSDL PostgreSQL |
 | 10 | Loki | `grafana/loki:3.4.2` | Grafana Loki v3.4.2 | Lưu trữ và xử lý log tập trung |
 | 11 | Promtail | `grafana/promtail:3.4.2` | Promtail v3.4.2 | Thu thập log container chuyển tiếp về Loki |
-| 12 | Trivy Scanner | `aquasec/trivy:0.60.0` | Trivy v0.60.0 | Quét lỗ hổng an toàn thông tin container |
+| 12 | Alert Sink | `python:3.11.11-alpine` | Python 3.11 on Alpine Linux | Dịch vụ tiếp nhận Webhook cảnh báo an ninh |
+| 13 | Trivy Scanner | `aquasec/trivy:0.60.0` | Trivy v0.60.0 | Quét lỗ hổng an toàn thông tin container |

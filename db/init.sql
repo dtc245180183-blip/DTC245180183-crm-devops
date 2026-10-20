@@ -289,12 +289,27 @@ INSERT INTO tasks (title, description, customer_id, assigned_to, created_by, due
 
 
 
--- 8. TÀI KHOẢN GIÁM SÁT PROMETHEUS POSTGRES EXPORTER (Quyền tối thiểu pg_monitor)
-DO $$
-BEGIN
-  IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'exporter') THEN
-    CREATE USER exporter WITH LOGIN PASSWORD 'exporter_password_configured_via_env';
-    GRANT pg_monitor TO exporter;
-  END IF;
-END
-$$;
+
+-- =============================================================================
+-- BẢO MẬT & PHÂN QUYỀN TỐI THIỂU (LEAST PRIVILEGE) CHO ỨNG DỤNG CRM
+-- =============================================================================
+-- Giải thích kiến trúc:
+-- 1. Toàn bộ bảng, index, sequence được tạo và sở hữu bởi crm_admin (Database Owner / Superuser).
+-- 2. Tài khoản ứng dụng crm_app KHÔNG phải là superuser, KHÔNG sở hữu bảng.
+-- 3. crm_app chỉ được cấp quyền thao tác dữ liệu (DML: SELECT, INSERT, UPDATE, DELETE).
+-- 4. crm_app bị thu hồi toàn bộ quyền DDL (không thể DROP TABLE, ALTER TABLE, TRUNCATE TABLE)
+--    và bị tước quyền CREATE trên schema public (không thể tự ý tạo bảng mới).
+-- =============================================================================
+
+-- Thu hồi quyền tạo đối tượng trên schema public
+REVOKE ALL ON SCHEMA public FROM PUBLIC;
+REVOKE ALL ON SCHEMA public FROM crm_app;
+GRANT USAGE ON SCHEMA public TO crm_app;
+
+-- Chỉ cấp quyền DML cần thiết cho crm_app trên toàn bộ bảng hiện có
+REVOKE ALL ON ALL TABLES IN SCHEMA public FROM crm_app;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO crm_app;
+
+-- Cấp quyền SEQUENCE để crm_app có thể sinh khóa chính tự tăng
+REVOKE ALL ON ALL SEQUENCES IN SCHEMA public FROM crm_app;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO crm_app;
